@@ -1,0 +1,6 @@
+attrs>=19.2.0
+python-crfsuite>=0.9.6
+frozendict
+numpy
+regex
+quickvec

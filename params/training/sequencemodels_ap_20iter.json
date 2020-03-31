@@ -1,0 +1,6 @@
+{
+  "backend": "sequencemodels",
+  "train_params": {
+    "max_iterations": 20
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "word": {
+    "window": [-2, -1, 0, 1, 2],
+    "token_identity": {},
+    "word_shape": {},
+    "is_capitalized": {},
+  },
+  "subword": {
+    "window": [0],
+    "suffix": {
+      "min_length": 1,
+      "max_length": 4
+    }
+  },
+  "distributional": {
+    "window": [-1, 0, 1],
+    "word_vectors": {
+      "scale": 2.0,
+      "path": "<path to embeddings>"
+    }
+  }
+}

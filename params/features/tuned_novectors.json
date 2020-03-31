@@ -1,0 +1,23 @@
+{
+  "baseline": {
+    "window": [
+      -2,
+      -1,
+      0,
+      1,
+      2
+    ],
+    "token_identity": {},
+    "word_shape": {},
+    "is_capitalized": {},
+    "all_caps": {},
+    "all_numeric": {},
+    "contains_number": {},
+    "is_punc": {},
+    "pos": {},
+    "suffix": {
+      "min_length": 1,
+      "max_length": 4
+    }
+  }
+}

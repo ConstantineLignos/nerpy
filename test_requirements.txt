@@ -1,0 +1,6 @@
+pytest
+pytest-cov
+mypy==0.761
+flake8
+black==19.10b0
+isort

@@ -1,0 +1,31 @@
+{
+        "set1": {
+                "window": [0],
+                "token_identity":{},
+                "word_shape":{},
+                "is_capitalized":{},
+                "all_caps":{},
+                "all_numeric":{},
+                "contains_number":{},
+                "is_punc":{},
+                "pos":{}
+        },
+        "set2": {
+                "window": [-1, 0, 1],
+                "is_capitalized":{},
+                "all_caps":{},
+                "all_numeric":{},
+                "contains_number":{},
+                "is_punc":{},
+                "pos":{}
+        },
+        "set3": {
+                "window": [-2, -1, 0, 1, 2],
+                "is_capitalized":{},
+                "all_caps":{},
+                "all_numeric":{},
+                "contains_number":{},
+                "is_punc":{},
+                "pos":{}
+        }
+    }

@@ -1,0 +1,24 @@
+-DOCSTART- -X- -X- O
+
+EU NNP B-NP B-ORG
+rejects VBZ B-VP O
+German JJ B-NP B-MISC
+call NN I-NP O
+to TO B-VP O
+boycott VB I-VP O
+British JJ B-NP B-MISC
+lamb NN I-NP O
+. . O O
+
+-DOCSTART- -X- -X- O
+
+Rare NNP B-NP O
+Hendrix NNP I-NP B-PER
+song NN I-NP O
+draft NN I-NP O
+sells VBZ B-VP O
+for IN B-PP O
+almost RB B-NP O
+$ $ I-NP O
+17,000 CD I-NP O
+. . O O

@@ -1,0 +1,7 @@
+{
+  "backend": "crfsuite",
+  "train_params": {
+    "algorithm": "ap",
+    "max_iterations": 20
+  }
+}
