@@ -126,7 +126,6 @@ def train_seqmodels(
     mention_encoder: MentionEncoder,
     feature_extractor: SentenceFeatureExtractor,
     mention_type: MentionType,
-    model_path: Union[str, Path],
     train_docs: Iterable[Document],
     train_params: Dict,
     *,
@@ -141,6 +140,4 @@ def train_seqmodels(
     annotator.train(
         train_docs, epochs=epochs, averaged=averaged, verbose=verbose,
     )
-    with open(model_path, "wb") as model_file:
-        pickle.dump(annotator._model, model_file, protocol=pickle.HIGHEST_PROTOCOL)
     return annotator

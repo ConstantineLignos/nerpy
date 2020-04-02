@@ -1,4 +1,4 @@
-from nerpy.annotator import MentionAnnotator
+from nerpy.annotator import MentionAnnotator, SequenceMentionAnnotator, Trainable
 from nerpy.document import (
     Document,
     DocumentBuilder,

@@ -40,7 +40,6 @@ def train_test(
     annotator = train(
         feature_params_path,
         mention_encoding_name,
-        model_path,
         train_params_path,
         train_path,
         verbose,
@@ -48,6 +47,7 @@ def train_test(
         log_file,
         random_seed,
     )
+    annotator.to_path(model_path)
 
     res = test(annotator, log_file, output_path, test_path)
 
@@ -57,7 +57,6 @@ def train_test(
 def train(
     feature_params_path: Union[Path, str],
     mention_encoding_name: str,
-    model_path: Union[Path, str],
     train_params_path: Union[Path, str],
     train_path: Union[Path, str],
     verbose: bool = False,
@@ -97,7 +96,6 @@ def train(
             encoder_instance,
             feature_extractor,
             mention_type,
-            model_path,
             train_docs,
             train_params,
             verbose=verbose,
@@ -109,7 +107,6 @@ def train(
             encoder_instance,
             feature_extractor,
             mention_type,
-            model_path,
             train_docs,
             train_params,
             verbose=verbose,

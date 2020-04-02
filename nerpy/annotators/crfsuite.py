@@ -1,10 +1,14 @@
 """A CRFSuite-based mention annotator."""
+import os
+import pickle
+import tempfile
 import time
+from os import PathLike
 from pathlib import Path
 from typing import IO, Dict, Iterable, List, Mapping, Optional, Sequence, Union
 
 from attr import attrib, attrs
-from attr.validators import instance_of
+from attr.validators import instance_of, optional
 from pycrfsuite import Tagger, Trainer  # pylint: disable=no-name-in-module
 
 from nerpy.annotator import SequenceMentionAnnotator, Trainable
@@ -28,18 +32,22 @@ class CRFSuiteAnnotator(SequenceMentionAnnotator, Trainable):
         validator=instance_of(MentionEncoder)  # type: ignore
     )
     _tagger: Tagger = attrib(validator=instance_of(Tagger))
+    _tagger_bytes: Optional[bytes] = attrib(validator=optional(instance_of(bytes)))
 
-    @classmethod
-    def from_model(
-        cls,
-        mention_type: MentionType,
-        feature_extractor: SentenceFeatureExtractor,
-        mention_encoder: MentionEncoder,
-        model_path: Union[str, Path],
-    ) -> "CRFSuiteAnnotator":
-        tagger = Tagger()
-        tagger.open(model_path)
-        return cls(mention_type, feature_extractor, mention_encoder, tagger)
+    def __getstate__(self) -> dict:
+        if self._tagger_bytes is None:
+            raise ValueError(
+                "Tagger does not have a binary model and cannot be serialized"
+            )
+
+        state = dict(self.__dict__)
+        state["_tagger"] = None
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        self.__dict__.update(state)
+        self._tagger = Tagger()
+        self._tagger.open_inmemory(self._tagger_bytes)
 
     @classmethod
     def for_training(
@@ -49,7 +57,23 @@ class CRFSuiteAnnotator(SequenceMentionAnnotator, Trainable):
         mention_encoder: MentionEncoder,
     ) -> "CRFSuiteAnnotator":
         tagger = Tagger()
-        return cls(mention_type, feature_extractor, mention_encoder, tagger)
+        return cls(mention_type, feature_extractor, mention_encoder, tagger, None)
+
+    @classmethod
+    def from_path(cls, path: Union[str, PathLike]) -> "CRFSuiteAnnotator":
+        with open(path, "rb") as file:
+            return pickle.load(file)
+
+    def to_path(self, path: Union[str, PathLike]) -> None:
+        with open(path, "wb") as file:
+            return pickle.dump(self, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def from_bytes(cls, buf: bytes) -> "CRFSuiteAnnotator":
+        return pickle.loads(buf)
+
+    def to_bytes(self) -> bytes:
+        return pickle.dumps(self)
 
     def mentions(self, doc: Document) -> Sequence[Mention]:
         mentions: List[Mention] = []
@@ -74,7 +98,7 @@ class CRFSuiteAnnotator(SequenceMentionAnnotator, Trainable):
         self,
         docs: Iterable[Document],
         *,
-        model_path: Union[str, Path],
+        tmp_model_path: Optional[Union[str, Path]] = None,
         algorithm: str,
         train_params: Optional[Mapping] = None,
         verbose: bool = False,
@@ -83,7 +107,8 @@ class CRFSuiteAnnotator(SequenceMentionAnnotator, Trainable):
         if train_params is None:
             train_params = {}
         trainer = Trainer(algorithm=algorithm, params=train_params, verbose=verbose)
-        Path(model_path).parent.mkdir(parents=True, exist_ok=True)
+        if tmp_model_path:
+            Path(tmp_model_path).parent.mkdir(parents=True, exist_ok=True)
 
         mention_count = 0
         token_count = 0
@@ -113,14 +138,32 @@ class CRFSuiteAnnotator(SequenceMentionAnnotator, Trainable):
             f"{token_count} tokens, {mention_count} mentions",
             file=log_file,
         )
+
+        # Set up model path
+        if tmp_model_path:
+            tmpdir = None
+        else:
+            # We need to use a temporary directory since NamedTemporaryFile cannot
+            # guarantee that the file can be opened a second time.
+            tmpdir = tempfile.TemporaryDirectory()
+            tmp_model_path = os.path.join(tmpdir.name, "crfsuite_annotator_tmp.model")
+
+        # Train
         print("Training", file=log_file)
         start_time = time.perf_counter()
-        trainer.train(model_path)
+        # Convert path to str since it can't take a PathLike
+        trainer.train(str(tmp_model_path))
         print(
             "Training took {} seconds".format(time.perf_counter() - start_time),
             file=log_file,
         )
-        self._tagger.open(model_path)
+
+        self._tagger.open(tmp_model_path)
+        with open(tmp_model_path, "rb") as model_file:
+            self._tagger_bytes = model_file.read()
+
+        if tmpdir:
+            tmpdir.cleanup()
 
     def train_featurized(
         self,
@@ -157,10 +200,10 @@ def train_crfsuite(
     mention_encoder: MentionEncoder,
     feature_extractor: SentenceFeatureExtractor,
     mention_type: MentionType,
-    model_path: Union[str, Path],
     train_docs: Iterable[Document],
     train_params: Dict,
     *,
+    tmp_model_path: Union[str, Path] = None,
     verbose: bool = False,
 ) -> CRFSuiteAnnotator:
     algorithm = train_params.pop("algorithm")
@@ -169,7 +212,7 @@ def train_crfsuite(
     )
     annotator.train(
         train_docs,
-        model_path=model_path,
+        tmp_model_path=tmp_model_path,
         algorithm=algorithm,
         train_params=train_params,
         verbose=verbose,

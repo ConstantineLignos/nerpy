@@ -5,12 +5,14 @@ import argparse
 from nerpy import (
     SUPPORTED_ENCODINGS,
     MentionType,
+    SequenceMentionAnnotator,
     get_mention_encoder,
     load_json,
     load_pickled_documents,
 )
 from nerpy.features import SentenceFeatureExtractor
 
+# TODO: Move scripts into package to share these constants
 BACKEND_CRFSUITE = "crfsuite"
 BACKEND_SEQUENCEMODELS = "sequencemodels"
 
@@ -35,14 +37,14 @@ def train(
 
     backend = train_config["backend"]
     train_params = train_config["train_params"]
+    ann: SequenceMentionAnnotator
     if backend == BACKEND_CRFSUITE:
         from nerpy.annotators.crfsuite import train_crfsuite
 
-        train_crfsuite(
+        ann = train_crfsuite(
             encoder_instance,
             feature_extractor,
             mention_type,
-            model_path,
             train_docs,
             train_params,
             verbose=verbose,
@@ -50,17 +52,18 @@ def train(
     elif backend == BACKEND_SEQUENCEMODELS:
         from nerpy.annotators.seqmodels import train_seqmodels
 
-        train_seqmodels(
+        ann = train_seqmodels(
             encoder_instance,
             feature_extractor,
             mention_type,
-            model_path,
             train_docs,
             train_params,
             verbose=verbose,
         )
     else:
         raise ValueError(f"Unrecognized backend: {backend}")
+
+    ann.to_path(model_path)
 
 
 def main() -> None:

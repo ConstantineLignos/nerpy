@@ -6,43 +6,45 @@ from collections import defaultdict
 from typing import DefaultDict
 
 from nerpy import (
-    SUPPORTED_ENCODINGS,
     EntityType,
-    MentionType,
-    get_mention_encoder,
+    SequenceMentionAnnotator,
     load_json,
     load_pickled_documents,
     pickle_documents,
     score_prf,
 )
-from nerpy.annotators.crfsuite import CRFSuiteAnnotator
-from nerpy.features import SentenceFeatureExtractor
 from nerpy.scoring import ScoringCounts, TokenCounter
+
+BACKEND_CRFSUITE = "crfsuite"
+BACKEND_SEQUENCEMODELS = "sequencemodels"
 
 NameCounter = DefaultDict[str, DefaultDict[EntityType, int]]
 
 
 def test(
     model_path: str,
+    backend: str,
     test_path: str,
     test_pred_path: str,
     feature_params_path: str,
-    mention_encoding_name: str,
     output_file: str,
     system_counts_file: str,
     gold_counts_file: str,
 ) -> None:
-    feature_params = load_json(feature_params_path)
+    # TODO: Figure out how to load features using this
+    _ = load_json(feature_params_path)
 
-    mention_encoder = get_mention_encoder(mention_encoding_name)
+    annotator: SequenceMentionAnnotator
+    if backend == BACKEND_CRFSUITE:
+        from nerpy.annotators.crfsuite import CRFSuiteAnnotator
 
-    # TODO: Only supports CRFSuite backend right now
-    annotator = CRFSuiteAnnotator.from_model(
-        MentionType("name"),
-        SentenceFeatureExtractor(feature_params),
-        mention_encoder(),
-        model_path,
-    )
+        annotator = CRFSuiteAnnotator.from_path(model_path)
+    elif backend == BACKEND_SEQUENCEMODELS:
+        from nerpy.annotators.seqmodels import SequenceModelsAnnotator
+
+        annotator = SequenceModelsAnnotator.from_path(model_path)
+    else:
+        raise ValueError(f"Unrecognized backend: {backend}")
 
     test_docs = load_pickled_documents(test_path)
 
@@ -143,11 +145,14 @@ def test(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Test CoNLL")
     parser.add_argument("model", help="Path to model output")
+    # TODO: Store this with the model instead
+    parser.add_argument(
+        "backend",
+        choices=(BACKEND_CRFSUITE, BACKEND_SEQUENCEMODELS),
+        help="Name of model backend",
+    )
     parser.add_argument("test", help="Path to CoNLL test file")
     parser.add_argument("feature_params", help="Path to feature parameters")
-    parser.add_argument(
-        "mention_encoding", help="mention encoding", choices=SUPPORTED_ENCODINGS
-    )
     parser.add_argument("test_pred", help="Path to CoNLL system predictions")
     parser.add_argument("-o", "--output_file", help="Path to scoring counts output")
     parser.add_argument("-s", "--system_counts_file", help="Path to system counts output")
@@ -156,10 +161,10 @@ def main() -> None:
 
     test(
         args.model,
+        args.backend,
         args.test,
         args.test_pred,
         args.feature_params,
-        args.mention_encoding,
         args.output_file,
         args.system_counts_file,
         args.gold_counts_file,
