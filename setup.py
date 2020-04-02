@@ -23,9 +23,11 @@ def setup_package() -> None:
             "quickvec",
         ],
         classifiers=[
-            "Development Status :: 3 - Alpha",
+            "Development Status :: 2 - Pre-Alpha",
             "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         project_urls={"Source": "https://github.com/ConstantineLignos/nerpy"},
     )

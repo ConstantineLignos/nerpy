@@ -1,8 +1,18 @@
 import tempfile
 
+import pytest
+
 from nerpy import BILOU, DocumentBuilder, EntityType, Mention, MentionType, Token
-from nerpy.annotators.seqmodels import SequenceModelsAnnotator, train_seqmodels
 from nerpy.features import SentenceFeatureExtractor
+
+try:
+    from nerpy.annotators.seqmodels import SequenceModelsAnnotator, train_seqmodels
+except ImportError:
+    pytest.skip(
+        "Skipping tests that require sequencemodels due to an import error",
+        allow_module_level=True,
+    )
+
 
 NAME = MentionType("name")
 ORG = EntityType(types=("ORG",))
