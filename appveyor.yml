@@ -1,0 +1,28 @@
+image:
+  - Visual Studio 2015
+  - Ubuntu
+
+environment:
+  # This is the Python that tox will bootstrap from on Windows
+  # Path taken from https://www.appveyor.com/docs/windows-images-software/#python
+  WIN_PYTHON: "C:\\Python36"
+  # The LIN_PYTHON paths are taken from https://www.appveyor.com/docs/linux-images-software/#python and may
+  # need to be updated as point releases come out.
+  matrix:
+    - TOXENV: py37
+      LIN_PYTHON: ~/venv3.7.5
+    - TOXENV: py38
+      LIN_PYTHON: ~/venv3.8.2
+
+build: false
+
+install:
+  - cmd: "set PATH=%WIN_PYTHON%;%WIN_PYTHON%\\Scripts;%PATH%"
+  - sh: "export PATH=$LIN_PYTHON/bin:$PATH"
+  - cmd: "echo %PATH%"
+  - sh: "echo $PATH"
+  - python --version
+  - pip install tox
+
+test_script:
+- tox

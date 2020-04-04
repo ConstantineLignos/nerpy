@@ -34,8 +34,7 @@ All training and test scripts require that the input be ingested.
 
 Set up for development as follows:
 ```
-pip install -r requirements.txt
-pip install -r test_requirements.txt
+pip install -e .[dev]
 ```
 
-Before committing changes, run `pre_commit.sh` to run autoformatting, static analysis, and tests.
+Before committing changes, run `tests/pre_commit.sh` to run autoformatting, static analysis, and tests.

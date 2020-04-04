@@ -20,8 +20,22 @@ def setup_package() -> None:
             "regex",
             "immutabledict",
             "numpy",
-            "quickvec",
+            "quickvec @ https://github.com/ConstantineLignos/quickvec/archive/master.zip",
         ],
+        extras_require={
+            "dev": [
+                "pytest",
+                "pytest-cov",
+                "black==19.10b0",
+                "isort",
+                "flake8",
+                "flake8-bugbear",
+                "mypy==0.770",
+                "tox",
+                "sphinx",
+            ],
+            # TODO: Add extras for sequencemodels
+        },
         classifiers=[
             "Development Status :: 2 - Pre-Alpha",
             "License :: OSI Approved :: MIT License",
