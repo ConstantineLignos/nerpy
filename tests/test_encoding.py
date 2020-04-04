@@ -3,11 +3,11 @@ import pytest
 from nerpy import (
     BILOU,
     BIO,
+    BIOES,
     BIOU,
     BMES,
     IO,
     IOB,
-    IOBES,
     DocumentBuilder,
     EntityType,
     Mention,
@@ -231,8 +231,8 @@ def test_bmes_encoder():
     assert encoder.decode_mentions(s1, labels6) == [m1, m2, m3, m4]
 
 
-def test_iobes_encoder():
-    encoder = IOBES()
+def test_bioes_encoder():
+    encoder = BIOES()
 
     labels1 = ["O", "B-PER", "E-PER", "O", "S-MISC", "S-LOC", "S-PER"]
     m1 = Mention.create(s1, [t2, t3], NAME, PER)
@@ -282,7 +282,7 @@ def test_iobes_encoder():
     assert encoder.decode_mentions(s1, labels6) == [m1, m2, m3, m4]
 
 
-def test_iob1_encoder():
+def test_iob_encoder():
     encoder = IOB()
 
     labels1 = ["I-PER", "I-PER", "I-LOC", "B-LOC", "I-LOC", "I-LOC", "B-LOC"]
@@ -316,7 +316,7 @@ def test_iob1_encoder():
     assert encoder.decode_mentions(s1, labels4) == [m1, m2, m3, m4, m5]
 
 
-def test_iob2_encoder():
+def test_bio_encoder():
     encoder = BIO()
 
     labels1 = ["B-PER", "I-PER", "B-LOC", "O", "B-LOC", "I-LOC", "I-LOC"]
@@ -356,7 +356,8 @@ def test_get_mention_encoder():
     assert get_mention_encoder("BIO") == BIO
     assert get_mention_encoder("IOB2") == BIO
     assert get_mention_encoder("BILOU") == BILOU
+    assert get_mention_encoder("BIOES") == BIOES
     assert get_mention_encoder("BMES") == BMES
-    assert get_mention_encoder("IOBES") == IOBES
+    assert get_mention_encoder("IOBES") == BIOES
     with pytest.raises(ValueError):
         get_mention_encoder("unknown")

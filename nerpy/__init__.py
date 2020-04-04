@@ -11,11 +11,11 @@ from nerpy.document import (
 from nerpy.encoding import (
     BILOU,
     BIO,
+    BIOES,
     BIOU,
     BMES,
     IO,
     IOB,
-    IOBES,
     SUPPORTED_ENCODINGS,
     MentionEncoder,
     get_mention_encoder,

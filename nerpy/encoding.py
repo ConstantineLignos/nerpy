@@ -212,12 +212,12 @@ class BILOU(AbstractMentionEncoder):
             return self.OUTSIDE
 
 
-class IOBES(BILOU):
+class BIOES(BILOU):
     LAST_PREFIX = "E"
     UNIT_PREFIX = "S"
 
 
-class BMES(IOBES):
+class BMES(BIOES):
     INSIDE_PREFIX = "M"
 
 
@@ -279,8 +279,8 @@ _ENCODING_NAMES: Dict[str, Type[MentionEncoder]] = {
     "BILOU": BILOU,
     "BIOU": BIOU,
     "BMES": BMES,
-    "IOBES": IOBES,
-    "BIOES": IOBES,
+    "IOBES": BIOES,
+    "BIOES": BIOES,
 }
 SUPPORTED_ENCODINGS: Sequence[str] = tuple(sorted(_ENCODING_NAMES))
 
