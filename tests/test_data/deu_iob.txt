@@ -1,0 +1,22 @@
+-DOCSTART- -X- -X- -X- O
+
+Diskussionen Diskussion NN I-NC O
+über über APPR I-PC O
+Asylbewerber- Asylbewerber- TRUNC I-NC O
+, , $, O O
+Aussiedler- Aussiedler- TRUNC I-NC O
+und und KON I-NC O
+Einwanderungsfragen Einwanderungsfrage|Einwanderungsfragen NN I-NC O
+haben haben VAFIN I-VC O
+in in APPR I-PC O
+Deutschland Deutschland NE I-NC I-LOC
+in in APPR I-PC O
+den d ART I-NC O
+letzten letzt ADJA I-NC O
+Monaten Monat NN I-NC O
+Politik Politik NN B-NC O
+und und KON O O
+Medien Medium NN I-NC O
+beherrscht beherrschen VVPP I-VC O
+. . $. O O
+

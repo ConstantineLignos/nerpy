@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Iterable, List, Optional, Sequence, TextIO, Tuple
 
 from attr import attrib, attrs
@@ -13,10 +14,10 @@ class CoNLLIngester:
     mention_encoder: MentionEncoder = attrib()
     ignore_comments: bool = attrib(default=False, kw_only=True)
 
-    def ingest(self, document_id: str, source: TextIO) -> List[Document]:
+    def ingest(self, source: TextIO, document_id_base: str) -> List[Document]:
         documents = []
         document_counter = 1
-        builder = DocumentBuilder(document_id + "_" + str(document_counter))
+        builder = DocumentBuilder(document_id_base + "_" + str(document_counter))
 
         for source_sentence in self._parse_file(
             source, ignore_comments=self.ignore_comments
@@ -35,11 +36,13 @@ class CoNLLIngester:
                 # End current document and start a new one
                 # We skip this if the builder is empty, which will happen for the very
                 # first document in the corpus (as there is no previous document to end).
-                if builder.sentences:
+                if builder:
                     document = builder.build()
                     documents.append(document)
                     document_counter += 1
-                    builder = DocumentBuilder(document_id + "_" + str(document_counter))
+                    builder = DocumentBuilder(
+                        document_id_base + "_" + str(document_counter)
+                    )
                 continue
 
             # Create mentions from tokens in sentence
@@ -133,12 +136,30 @@ class CoNLLIngester:
             return cls(text, pos_tag, lemmas, chunk_tag, ne_tag, is_docstart, line_num)
 
 
+def read_conll(
+    path: PathType,
+    mention_encoder: MentionEncoder,
+    *,
+    document_id_base: Optional[str] = None,
+    ignore_comments: bool = False,
+) -> List[Document]:
+    ingester = CoNLLIngester(mention_encoder, ignore_comments=ignore_comments)
+
+    # Create document_id_base from filename if needed
+    if document_id_base is None:
+        document_id_base = Path(path).name
+
+    with open(path, encoding="utf8") as file:
+        return ingester.ingest(file, document_id_base)
+
+
 def write_conll(
     docs: Sequence[Document],
     output_path: PathType,
     mention_encoder: MentionEncoder,
     lang: Optional[str] = None,
 ) -> None:
+    # TODO: Check that this can round-trip Spanish data correctly
     # Figure out how many fields to output by seeing how many of the CoNLL
     # fields are present
     sample_tok = docs[0][0][0]

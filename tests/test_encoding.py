@@ -55,6 +55,14 @@ def test_generic_decoder_bad_labels():
         encoder.decode_mentions(s1, labels4)
 
 
+def test_nested_encode():
+    encoder = BIO()
+    m1 = Mention.create(s1, [t1, t2, t3], NAME, ORG)
+    m2 = Mention.create(s1, [t3], NAME, LOC)
+    with pytest.raises(ValueError):
+        encoder.encode_mentions(s1, [m1, m2])
+
+
 def test_io_encoder():
     encoder = IO()
 

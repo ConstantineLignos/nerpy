@@ -1,9 +1,30 @@
+# TODO: Rename to test_conll.py
+
 import io
+import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import List
 
 import pytest
 
-from nerpy import BIO, IOB, CoNLLIngester
+from nerpy import (
+    BIO,
+    IOB,
+    CoNLLIngester,
+    DocumentBuilder,
+    EntityType,
+    Mention,
+    MentionEncoder,
+    MentionType,
+    Token,
+)
+from nerpy.ingest.conll import read_conll, write_conll
+from nerpy.io import PathType
+
+TEST_DATA_DIR = os.path.join("tests", "test_data")
+
+# TODO: Build all paths using Path
 
 
 def test_label_conversion():
@@ -36,10 +57,10 @@ def test_label_conversion():
 
 def test_ingest():
     ingest = CoNLLIngester(IOB())
-    iob1_docs = ingest.ingest("test_iob", open("tests/test_data/en_iob.txt"))
+    iob1_docs = ingest.ingest(open("tests/test_data/en_iob.txt"), "test_iob")
 
     ingest = CoNLLIngester(BIO())
-    iob2_docs = ingest.ingest("test_bio", open("tests/test_data/en_bio.txt"))
+    iob2_docs = ingest.ingest(open("tests/test_data/en_bio.txt"), "test_bio")
 
     for doc1, doc2 in zip(iob1_docs, iob2_docs):
         assert doc1.mentions == doc2.mentions
@@ -57,7 +78,7 @@ rejects VBZ B-VP O
     )
     ingest = CoNLLIngester(IOB())
     with pytest.raises(ValueError):
-        ingest.ingest("test", text)
+        ingest.ingest(text, "test")
 
 
 def test_ignore_comments():
@@ -71,11 +92,11 @@ rejects VBZ B-VP O
     # Default behavior fails on comments
     ingest = CoNLLIngester(BIO())
     with pytest.raises(ValueError):
-        ingest.ingest("test", io.StringIO(text))
+        ingest.ingest(io.StringIO(text), "test")
 
     # No problem if flag specified
     ingest = CoNLLIngester(BIO(), ignore_comments=True)
-    docs = ingest.ingest("test", io.StringIO(text))
+    docs = ingest.ingest(io.StringIO(text), "test")
     assert len(docs) == 1
     print(docs[0])
     assert len(docs[0]) == 1
@@ -191,3 +212,70 @@ def test_iob_conversion():
     iob2 = ["B-PER", "I-PER", "B-LOC", "O", "B-LOC", "I-LOC", "I-LOC", "O"]
     new_iob1 = iob2_iob1(iob2)
     assert iob1 == new_iob1
+
+
+def test_write_conll() -> None:
+    eng_bio_path = Path(TEST_DATA_DIR, "en_bio.txt")
+    eng_iob_path = Path(TEST_DATA_DIR, "en_iob.txt")
+
+    # Test round-tripping
+    with TemporaryDirectory() as tmpdir:
+        input_paths = (eng_bio_path, eng_iob_path)
+        output_paths = [Path(tmpdir, path.name) for path in input_paths]
+        mention_encoders = (BIO(), IOB())
+        for input_path, output_path, mention_encoder in zip(
+            input_paths, output_paths, mention_encoders
+        ):
+            _round_trip_conll_file(input_path, output_path, mention_encoder)
+
+
+def _round_trip_conll_file(
+    input_path: PathType, output_path: PathType, mention_encoder: MentionEncoder
+) -> None:
+    docs1 = read_conll(input_path, mention_encoder)
+    write_conll(docs1, output_path, mention_encoder)
+    docs2 = read_conll(output_path, mention_encoder)
+    assert docs2 == docs1
+
+
+def test_nested_names() -> None:
+    encoder = BIO()
+    name = MentionType("name")
+    per = EntityType("PER")
+    builder = DocumentBuilder("test")
+    t1 = Token("token1", 0)
+    t2 = Token("token2", 1)
+    s1 = builder.create_sentence([t1, t2])
+    m1 = Mention.create(s1, [t1, t2], name, per)
+    m2 = Mention.create(s1, [t2], name, per)
+    builder.add_mentions([m1, m2])
+    doc = builder.build()
+    with TemporaryDirectory() as tmpdir:
+        output_path = Path(tmpdir, "tmp.conll")
+        with pytest.raises(ValueError):
+            write_conll([doc], output_path, encoder)
+
+
+def test_ger() -> None:
+    ger_path = Path(TEST_DATA_DIR, "deu_iob.txt")
+    docs = read_conll(ger_path, IOB())
+    # One doc
+    assert len(docs) == 1
+    doc = docs[0]
+
+    # One sentence
+    assert len(doc) == 1
+    # One mention in total
+    assert len(doc.mentions) == 1
+
+    sent, mentions = next(iter(doc.sentences_with_mentions()))
+    # 19 tokens
+    assert len(sent) == 19
+    # One mention in sentence
+    assert len(mentions) == 1
+    # Check lemma on token 6
+    assert sent[6].lemmas == ("Einwanderungsfrage", "Einwanderungsfragen")
+
+    with TemporaryDirectory() as tmpdir:
+        out_path = Path(tmpdir, ger_path.name)
+        _round_trip_conll_file(ger_path, out_path, IOB())

@@ -1,5 +1,5 @@
 import re
-from typing import Generator, Match, Optional, Pattern, TextIO, Tuple
+from typing import Generator, List, Match, Optional, Pattern, TextIO, Tuple
 
 from attr import attrs
 
@@ -96,8 +96,9 @@ class OntoNotesIngester:
 
             # Create tokens and mentions
             sentence_index += 1
-            tokens = []
+            tokens: List[Token] = []
             token_idx = -1
+            sentence_mentions: List[Mention] = []
 
             for token, is_token_delim in split_keeping_delims(
                 source_sentence, self._PATTERN_SPACE_OR_ENAMEX
@@ -136,15 +137,16 @@ class OntoNotesIngester:
                             MentionType("name"),
                             entity_type,
                         )
-                        builder.add_mention(mention)
+                        sentence_mentions.append(mention)
                 else:
                     # Normal token, compute span and offsets
                     token_idx += 1
                     token_text = self._token_text(token)
                     tokens.append(Token(token_text, token_idx))
 
-            # Add sentence to document
+            # Add sentence and mentions to document
             builder.create_sentence(tokens)
+            builder.add_mentions(sentence_mentions)
 
         document = builder.build()
 

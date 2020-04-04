@@ -18,7 +18,7 @@ def setup_package() -> None:
             "attrs>=19.2.0",
             "python-crfsuite>=0.9.6",
             "regex",
-            "frozendict",
+            "immutabledict",
             "numpy",
             "quickvec",
         ],

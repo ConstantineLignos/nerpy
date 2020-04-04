@@ -1,3 +1,4 @@
+from operator import attrgetter
 from typing import (
     Any,
     Dict,
@@ -7,14 +8,19 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Union,
     overload,
 )
 
-from attr import Attribute, attrib, attrs, converters, evolve
+from attr import Attribute, attrib, attrs, evolve
 from attr.validators import instance_of
-from frozendict import frozendict
+from immutabledict import immutabledict
+
+_EMPTY_IMMUTABLEDICT = immutabledict()
+
+# TODO: Standardize all object creation around classmethods called create
 
 # Make a str instance validator for convenience
 # pylint: disable=invalid-name
@@ -33,12 +39,7 @@ def _validator_nonnegative(_inst: Any, _attr: Attribute, value: Any) -> None:
         raise ValueError("Negative value: {}".format(value))
 
 
-@attrs(frozen=True, slots=True)
-class MentionType:
-    type: str = attrib(validator=_validator_nonempty_str)
-
-
-def _convert_entity_types(types: Union[str, Sequence[str]]) -> Tuple[str, ...]:
+def _convert_compound_types(types: Union[str, Sequence[str]]) -> Tuple[str, ...]:
     if isinstance(types, str):
         # Return as singleton tuple
         return (types,)
@@ -46,9 +47,23 @@ def _convert_entity_types(types: Union[str, Sequence[str]]) -> Tuple[str, ...]:
         return tuple(types)
 
 
+def _convert_immutabledict(mapping: Optional[Mapping]) -> immutabledict:
+    return immutabledict(mapping) if mapping else _EMPTY_IMMUTABLEDICT
+
+
+# Type-specific implementations to work around buggy type checkers
+def _tuplify_tokens(tokens: Sequence["Token"]) -> Tuple["Token", ...]:
+    return tuple(tokens)
+
+
+# Type-specific implementations to work around buggy type checkers
+def _tuplify_sentences(sentences: Sequence["Sentence"]) -> Tuple["Sentence", ...]:
+    return tuple(sentences)
+
+
 @attrs(frozen=True, slots=True)
 class EntityType(Sequence[str]):
-    types: Tuple[str, ...] = attrib(converter=_convert_entity_types)
+    types: Tuple[str, ...] = attrib(converter=_convert_compound_types)
 
     # PyCharm doesn't understand .validator
     # noinspection PyUnresolvedReferences
@@ -75,7 +90,12 @@ class EntityType(Sequence[str]):
         return len(self.types)
 
     def __str__(self) -> str:
-        return ".".join(self.types)
+        return ":".join(self.types)
+
+
+@attrs(frozen=True, slots=True)
+class MentionType(EntityType):
+    pass
 
 
 @attrs(frozen=True, slots=True)
@@ -87,10 +107,8 @@ class Token(Sequence[str]):
     text: str = attrib(validator=_validator_nonempty_str)
     # Mypy gives a false positive on this validator
     index: int = attrib(validator=_validator_nonnegative, eq=False)  # type: ignore
-    # Mypy attrs plugin raises false positives on converters and validators
     properties: Mapping[str, Any] = attrib(
-        converter=converters.optional(frozendict),  # type: ignore
-        default=None,
+        converter=_convert_immutabledict, default=_EMPTY_IMMUTABLEDICT,
     )
 
     @property
@@ -147,10 +165,13 @@ class Token(Sequence[str]):
     def __len__(self) -> int:
         return len(self.text)
 
+    def __str__(self) -> str:
+        return self.text
+
 
 @attrs(frozen=True, slots=True)
 class Sentence(Sequence[Token]):
-    tokens: Tuple[Token, ...] = attrib(converter=tuple)
+    tokens: Tuple[Token, ...] = attrib(converter=_tuplify_tokens)
     # Mypy gives a false positive on this validator
     index: int = attrib(validator=_validator_nonnegative, eq=False)  # type: ignore
 
@@ -183,6 +204,9 @@ class Sentence(Sequence[Token]):
     def __len__(self) -> int:
         return len(self.tokens)
 
+    def __str__(self) -> str:
+        return " ".join([str(token) for token in self.tokens])
+
 
 @attrs(frozen=True, slots=True)
 class Mention:
@@ -191,11 +215,15 @@ class Mention:
     end: int = attrib(validator=_validator_nonnegative)
     mention_type: MentionType = attrib(validator=instance_of(MentionType))
     entity_type: EntityType = attrib(validator=instance_of(EntityType))
+    # TODO: Add properties and metadata. Metadata is not compared in equality
 
     @end.validator
     def _validate_end(self, _attr: Attribute, value: int) -> None:
         if value <= self.start:
-            raise ValueError("End token index must be greater than start")
+            raise ValueError(
+                f"End token index ({value}) must be greater than "
+                f"start index ({self.start})"
+            )
 
     @staticmethod
     def create(
@@ -227,26 +255,56 @@ class Mention:
     def __len__(self) -> int:
         return self.end - self.start
 
-    def tokens(self, document: "Document") -> Tuple[Token, ...]:
-        return document.sentences[self.sentence_index].tokens[self.start : self.end]
+    @property
+    def sort_key(self) -> Tuple[int, int, int, Tuple[str, ...], Tuple[str, ...]]:
+        return (
+            self.sentence_index,
+            self.start,
+            self.end,
+            self.mention_type.types,
+            self.entity_type.types,
+            # TODO: Add properties
+        )
 
-    def tokenized_text(self, document: "Document") -> str:
-        return " ".join([token.text for token in self.tokens(document)])
+    def tokens(self, source: Union["Document", Sentence]) -> Tuple[Token, ...]:
+        if isinstance(source, Sentence):
+            if self.sentence_index != source.index:
+                raise ValueError(
+                    f"Mention is from sentence with index {self.sentence_index} "
+                    f"but sentence has index {source.index}"
+                )
+            return source[self.start : self.end]
+        elif isinstance(source, Document):
+            return source[self.sentence_index][self.start : self.end]
+
+    def tokenized_text(self, source: Union["Document", Sentence]) -> str:
+        return " ".join([token.text for token in self.tokens(source)])
+
+
+def _sort_mentions(mentions: Sequence[Mention]) -> Tuple[Mention, ...]:
+    return tuple(sorted(mentions, key=attrgetter("sort_key")))
 
 
 @attrs(frozen=True, slots=True)
 class Document(Sequence[Sentence]):
     id: str = attrib(validator=_validator_nonempty_str)
-    sentences: Tuple[Sentence, ...] = attrib(converter=tuple)
-    # TODO: Make these sorted, coordinate with DocumentBuilder initialization
-    mentions: Tuple[Mention, ...] = attrib(converter=tuple, default=())
+    sentences: Tuple[Sentence, ...] = attrib(converter=_tuplify_sentences)
+    mentions: Tuple[Mention, ...] = attrib(converter=_sort_mentions, default=())
+    properties: immutabledict = attrib(
+        converter=_convert_immutabledict, default=_EMPTY_IMMUTABLEDICT, kw_only=True
+    )
+    metadata: immutabledict = attrib(
+        converter=_convert_immutabledict,
+        default=_EMPTY_IMMUTABLEDICT,
+        eq=False,
+        kw_only=True,
+    )
     # TODO: Consider making this the primary mention representation so we don't store mentions twice
     _sentence_mentions: Tuple[Tuple[Mention, ...], ...] = attrib(init=False)
 
     @_sentence_mentions.default
     def _sentence_mentions_default(self) -> Tuple[Tuple[Mention, ...], ...]:
         sentence_mentions: List[List[Mention]] = [[] for _ in range(len(self.sentences))]
-        # TODO: Sort mentions before iteration so that order is guaranteed
         for mention in self.mentions:
             sentence_mentions[mention.sentence_index].append(mention)
         return tuple(tuple(mentions) for mentions in sentence_mentions)
@@ -268,6 +326,9 @@ class Document(Sequence[Sentence]):
     def __len__(self) -> int:
         return len(self.sentences)
 
+    def __str__(self):
+        return "\n".join([str(sentence) for sentence in self.sentences])
+
     def sentences_with_mentions(self) -> Iterable[Tuple[Sentence, Tuple[Mention, ...]]]:
         for sentence, mentions in zip(self.sentences, self._sentence_mentions):
             yield sentence, mentions
@@ -284,35 +345,63 @@ class Document(Sequence[Sentence]):
     def copy_without_mentions(self) -> "Document":
         return evolve(self, mentions=())
 
-    def __str__(self):
-        lines: List[str] = []
-        for sentence in self:
-            lines.append(" ".join(token.text for token in sentence))
-        return "\n".join(lines)
-
 
 @attrs(eq=False)
 class DocumentBuilder:
     id: str = attrib(validator=_validator_nonempty_str)
-    sentences: List[Sentence] = attrib(factory=list, init=False)
-    # TODO: Should mentions be an ordered set?
-    mentions: List[Mention] = attrib(factory=list, init=False)
-    sentence_idx: int = attrib(default=0, init=False)
+    properties: dict = attrib(factory=dict, kw_only=True)
+    metadata: dict = attrib(factory=dict, kw_only=True)
+    next_sentence_idx: int = attrib(default=0, init=False)
+    _sentences: List[Sentence] = attrib(factory=list, init=False)
+    _mentions: List[Mention] = attrib(factory=list, init=False)
+    _mention_set: Set[Mention] = attrib(factory=set, init=False)
+
+    def __len__(self) -> int:
+        return len(self._sentences)
+
+    def __bool__(self) -> bool:
+        return bool(self._sentences)
 
     def add_mention(self, mention: Mention) -> "DocumentBuilder":
-        self.mentions.append(mention)
+        if mention in self._mention_set:
+            raise ValueError("Cannot add duplicate mention: " + repr(mention))
+        if not mention.sentence_index < self.next_sentence_idx:
+            raise ValueError(
+                f"Mention has sentence index {mention.sentence_index} which "
+                f"is greater than last sentence index {self.next_sentence_idx}"
+            )
+        self._mentions.append(mention)
+        self._mention_set.add(mention)
         return self
 
     def add_mentions(self, mentions: Iterable[Mention]) -> "DocumentBuilder":
-        self.mentions.extend(mentions)
+        for mention in mentions:
+            self.add_mention(mention)
         return self
 
+    def contains_mention(self, mention: Mention) -> bool:
+        return mention in self._mention_set
+
     def create_sentence(self, tokens: Sequence[Token]) -> Sentence:
-        sentence = Sentence.from_tokens(tokens, self.sentence_idx)
-        self.sentences.append(sentence)
-        self.sentence_idx += 1
+        sentence = Sentence.from_tokens(tokens, self.next_sentence_idx)
+        self.add_sentence(sentence)
         return sentence
+
+    def add_sentence(self, sentence: Sentence) -> "DocumentBuilder":
+        if sentence.index != self.next_sentence_idx:
+            raise ValueError(
+                f"Expected sentence to have index {self.next_sentence_idx} "
+                f"but found index {sentence.index}"
+            )
+        self._sentences.append(sentence)
+        self.next_sentence_idx += 1
+        return self
+
+    def add_sentences(self, sentences: Iterable[Sentence]) -> "DocumentBuilder":
+        for sentence in sentences:
+            self.add_sentence(sentence)
+        return self
 
     def build(self) -> Document:
         # Mypy does not recognize tokens as an Iterable
-        return Document(self.id, self.sentences, self.mentions)  # type: ignore
+        return Document(self.id, self._sentences, self._mentions)  # type: ignore

@@ -1,6 +1,15 @@
+import os
+from tempfile import TemporaryDirectory
+
 import pytest
 
 from nerpy import DocumentBuilder, EntityType, Mention, MentionType, Sentence, Token
+from nerpy.io import (
+    load_pickled_document,
+    load_pickled_documents,
+    pickle_document,
+    pickle_documents,
+)
 
 NAME = MentionType("name")
 DESC = MentionType("desc")
@@ -11,54 +20,77 @@ MISC = EntityType(("MISC",))
 
 def test_full_document() -> None:
     builder = DocumentBuilder("test")
+    assert len(builder) == 0
+    assert not bool(builder)
+
+    # Add tokens and sentence
     t1 = Token("foo", 0)
     t2 = Token("bar", 1)
     s1 = builder.create_sentence([t1, t2])
+    assert len(builder) == 1
+    assert bool(builder)
+    # Can't add another sentence with the same index
+    with pytest.raises(ValueError):
+        builder.add_sentence(s1)
+    with pytest.raises(ValueError):
+        builder.add_sentences([s1])
+
+    # Add mentions
     m1 = Mention.create(s1, [t1], NAME, PER)
     m2 = Mention.create(s1, [t2], NAME, ORG_COM)
     m3 = Mention.create(s1, [t1, t2], DESC, MISC)
+    assert not builder.contains_mention(m1)
     builder.add_mention(m1)
+    assert builder.contains_mention(m1)
+
     builder.add_mentions([m2, m3])
-    d = builder.build()
+    assert builder.contains_mention(m2)
+    assert builder.contains_mention(m3)
 
-    # Check tokens and sentence
-    assert d[0] == s1
-    assert list(d) == [s1]
-    assert list(d[0]) == [t1, t2]
-    assert len(d[0]) == 2
-    assert d[0][0] == t1
-    assert d[0][1] == t2
-    assert list(t1) == ["f", "o", "o"]
-    assert len(t1) == 3
-    assert t1[1] == "o"
+    # Cannot add a duplicate mention
+    with pytest.raises(ValueError):
+        builder.add_mention(m1)
+    orig_doc = builder.build()
 
-    # Check mentions
-    assert len(d.mentions) == 3
-    assert d.mentions[0].tokens(d) == (t1,)
-    assert d.mentions[0].mention_type == NAME
-    assert d.mentions[0].entity_type == PER
-    assert len(d.mentions[0]) == 1
-    assert d.mentions[1].tokens(d) == (t2,)
-    assert d.mentions[1].mention_type == NAME
-    assert d.mentions[1].entity_type == ORG_COM
-    assert len(d.mentions[1]) == 1
-    assert d.mentions[2].tokens(d) == (t1, t2)
-    assert d.mentions[2].mention_type == DESC
-    assert d.mentions[2].entity_type == MISC
-    assert len(d.mentions[2]) == 2
+    # Serialize and load the doc
+    with TemporaryDirectory() as tmpdir:
+        single_doc_path = os.path.join(tmpdir, "doc.pkl")
+        pickle_document(orig_doc, single_doc_path)
+        unpickled_doc = load_pickled_document(single_doc_path)
 
-    # Sentence with mentions
-    assert list(d.sentences_with_mentions()) == [(s1, (m1, m2, m3))]
+        list_doc_path = os.path.join(tmpdir, "docs.pkl")
+        pickle_documents([orig_doc], list_doc_path)
+        unpickled_docs = load_pickled_documents(list_doc_path)
 
-    # Copy with mentions
-    m4 = Mention.create(s1, [t1, t2], NAME, PER)
-    assert d.copy_with_mentions([m4]).mentions == (m4,)
+    for d in orig_doc, unpickled_doc, unpickled_docs[0]:
+        # Check tokens and sentence
+        assert len(d) == 1
+        assert d[0] == s1
+        assert list(d) == [s1]
+        assert list(d[0]) == [t1, t2]
+        assert len(d[0]) == 2
+        assert d[0][0] == t1
+        assert d[0][1] == t2
+        assert list(t1) == ["f", "o", "o"]
+        assert len(t1) == 3
+        assert t1[1] == "o"
 
-    # Copy without mentions
-    assert d.copy_without_mentions().mentions == ()
+        # Check mentions
+        # m1 sorts first, then m3, then m2
+        assert d.mentions == (m1, m3, m2)
 
-    # Test str
-    assert str(d) == "foo bar"
+        # Sentence with mentions
+        assert list(d.sentences_with_mentions()) == [(s1, (m1, m3, m2))]
+
+        # Copy with mentions
+        m4 = Mention.create(s1, [t1, t2], NAME, PER)
+        assert d.copy_with_mentions([m4]).mentions == (m4,)
+
+        # Copy without mentions
+        assert d.copy_without_mentions().mentions == ()
+
+        # Test str
+        assert str(d) == "foo bar"
 
 
 def test_sentence_mentions() -> None:
@@ -66,19 +98,28 @@ def test_sentence_mentions() -> None:
     # Sentence 1
     t1 = Token("a", 0)
     t2 = Token("b", 1)
-    s1 = builder.create_sentence([t1, t2])
+    t3 = Token("c", 2)
+    s1 = Sentence([t1, t2, t3], 0)
     m1 = Mention.create(s1, [t1], NAME, PER)
-    m2 = Mention.create(s1, [t2], NAME, MISC)
+    m2 = Mention.create(s1, [t2, t3], NAME, MISC)
 
     # Sentence 1
-    t3 = Token("c", 0)
-    s2 = builder.create_sentence([t3])
+    t4 = Token("d", 0)
+    s2 = Sentence([t4], 1)
 
     # Sentence 3
-    t4 = Token("d", 0)
-    s3 = builder.create_sentence([t4])
-    m3 = Mention.create(s3, [t4], NAME, PER)
+    t5 = Token("e", 0)
+    s3 = Sentence([t5], 2)
+    m3 = Mention.create(s3, [t5], NAME, PER)
 
+    # Cannot add a mention before its sentence
+    with pytest.raises(ValueError):
+        builder.add_mentions([m1, m2])
+    with pytest.raises(ValueError):
+        builder.add_mentions([m3])
+
+    # Add sentences and mentions
+    builder.add_sentences([s1, s2, s3])
     # Intentionally provide mentions out of order, since the order should not matter
     builder.add_mentions([m3, m1, m2])
     d = builder.build()
@@ -96,6 +137,28 @@ def test_sentence_mentions() -> None:
     s0 = Sentence.from_tokens([Token("z", 0)], 0)
     with pytest.raises(ValueError):
         d.mentions_for_sentence(s0)
+
+    # Test tokens
+    m1_tokens = (t1,)
+    m2_tokens = (t2, t3)
+    assert len(m1) == 1
+    assert len(m2) == 2
+    assert m1.tokens(d) == m1_tokens
+    assert m1.tokens(s1) == m1_tokens
+    assert m2.tokens(d) == m2_tokens
+    assert m2.tokens(s1) == m2_tokens
+    m1_tokenized_text = " ".join([tok.text for tok in m1_tokens])
+    m2_tokenized_text = " ".join([tok.text for tok in m2_tokens])
+    assert m1.tokenized_text(d) == m1_tokenized_text
+    assert m1.tokenized_text(s1) == m1_tokenized_text
+    assert m2.tokenized_text(d) == m2_tokenized_text
+    assert m2.tokenized_text(s1) == m2_tokenized_text
+
+    # Test getting tokens for a mention from the wrong sentence
+    with pytest.raises(ValueError):
+        m2.tokens(s2)
+    with pytest.raises(ValueError):
+        m2.tokenized_text(s2)
 
 
 def test_token_properties() -> None:
@@ -117,24 +180,35 @@ def test_token_properties() -> None:
 
 
 def test_entity_type() -> None:
-    # Simple type, by string or iterable
-    et1 = EntityType("foo")
-    et2 = EntityType(["foo"])
-    assert et1[0] == "foo"
-    assert len(et1) == 1
-    assert et2[0] == "foo"
-    assert len(et2) == 1
-    assert et1 == et2
-    assert str(et1) == "foo"
-    with pytest.raises(IndexError):
-        et1[1]
+    for type_class in (EntityType, MentionType):
+        # Simple type, by string or iterable
+        t1 = type_class("foo")
+        t2 = type_class(["foo"])
+        assert t1[0] == "foo"
+        assert len(t1) == 1
+        assert t2[0] == "foo"
+        assert len(t2) == 1
+        assert t1 == t2
+        assert str(t1) == "foo"
+        with pytest.raises(IndexError):
+            t1[1]
 
-    # Multi-level type
-    et3 = EntityType(["foo", "bar"])
-    assert et3[0] == "foo"
-    assert et3[1] == "bar"
-    assert len(et3) == 2
-    assert str(et3) == "foo.bar"
+        # Multi-level type
+        t3 = type_class(["foo", "bar"])
+        assert t3[0] == "foo"
+        assert t3[1] == "bar"
+        assert len(t3) == 2
+        assert str(t3) == "foo:bar"
+
+        # Invalid initializations
+        with pytest.raises(ValueError):
+            type_class("")
+
+        with pytest.raises(ValueError):
+            type_class(())
+
+        with pytest.raises(TypeError):
+            type_class(7)  # type: ignore
 
 
 def test_bad_token() -> None:
@@ -143,25 +217,6 @@ def test_bad_token() -> None:
 
     with pytest.raises(ValueError):
         Token("foo", -1)
-
-
-def test_bad_mention_type() -> None:
-    with pytest.raises(ValueError):
-        MentionType("")
-
-    with pytest.raises(TypeError):
-        MentionType(7)  # type: ignore
-
-
-def test_bad_entity_type() -> None:
-    with pytest.raises(ValueError):
-        EntityType("")
-
-    with pytest.raises(ValueError):
-        EntityType(())
-
-    with pytest.raises(TypeError):
-        EntityType(7)  # type: ignore
 
 
 def test_bad_sentence() -> None:

@@ -1,6 +1,6 @@
 pytest
 pytest-cov
-mypy==0.761
+mypy==0.770
 flake8
 black==19.10b0
 isort

@@ -13,12 +13,12 @@ def score_conll(
 
     with open(reference_path, encoding="utf8") as reference_file:
         reference_docs = CoNLLIngester(encoder(), ignore_comments=ignore_comments).ingest(
-            os.path.basename(reference_path), reference_file
+            reference_file, os.path.basename(reference_path)
         )
 
     with open(prediction_path, encoding="utf8") as prediction_file:
         pred_docs = CoNLLIngester(encoder(), ignore_comments=ignore_comments).ingest(
-            os.path.basename(prediction_path), prediction_file
+            prediction_file, os.path.basename(prediction_path)
         )
 
     res = score_prf(reference_docs, pred_docs)

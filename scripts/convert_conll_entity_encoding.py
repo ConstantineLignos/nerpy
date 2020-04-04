@@ -17,7 +17,7 @@ def convert_conll(
         input_mention_encoding = get_mention_encoder(input_encoding)
         input_docs = CoNLLIngester(
             input_mention_encoding(), ignore_comments=ignore_comments
-        ).ingest("input", input_file)
+        ).ingest(input_file, "input")
 
     output_mention_encoding = get_mention_encoder(output_encoding)()
     # TODO: This should use the same code as write_conll.py

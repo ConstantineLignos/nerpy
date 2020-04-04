@@ -55,12 +55,11 @@ class AbstractMentionEncoder(MentionEncoder, metaclass=ABCMeta):
             # Set entity type on all tokens
             for idx in range(start, end):
                 token = encoder_tokens[idx]
-                assert token.entity_type is None, (
-                    "Token at index {} already has entity type {}, "
-                    "refusing to overwrite it with entity type {}".format(
-                        idx, token.entity_type, entity_type
+                if token.entity_type is not None:
+                    raise ValueError(
+                        f"Token at index {idx} already has entity type {token.entity_type}, "
+                        f"refusing to overwrite it with entity type {entity_type}"
                     )
-                )
                 token.entity_type = entity_type
 
             # Set first and last. Note that both will be True for single-token mentions.

@@ -21,7 +21,7 @@ def ingest_conll(
     start_time = time.perf_counter()
     with open(input_path, encoding="utf8") as train_file:
         input_docs = CoNLLIngester(encoder(), ignore_comments=ignore_comments).ingest(
-            os.path.basename(input_path), train_file
+            train_file, os.path.basename(input_path)
         )
     print(
         f"Loaded {len(input_docs)} documents in {time.perf_counter() - start_time} seconds"
