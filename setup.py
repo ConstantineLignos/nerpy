@@ -20,7 +20,7 @@ def setup_package() -> None:
             "regex",
             "immutabledict",
             "numpy",
-            "quickvec @ https://github.com/ConstantineLignos/quickvec/archive/master.zip",
+            "quickvec @ https://github.com/ConstantineLignos/quickvec/archive/fef37d56af03288cee758a2ab6f9d70cc035f0d5.zip#egg=quickvec-0.2.0-dev",
         ],
         extras_require={
             "dev": [

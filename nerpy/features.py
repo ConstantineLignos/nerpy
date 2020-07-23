@@ -41,7 +41,7 @@ class WordEmbeddingFeatures(FeatureExtractor):
 
     def __init__(self, path: str, *, scale: float = 1.0, cache_size: int = 10000):
         self.scale = scale
-        self.word_vectors = SqliteWordEmbedding.from_db(path)
+        self.word_vectors = SqliteWordEmbedding.open(path)
         self._feature_keys_cache: Dict[int, List[str]] = {}
         # Store normalized form or None to indicate no match
         self._word_casing: Dict[str, Optional[str]] = {}
