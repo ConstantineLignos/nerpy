@@ -1,11 +1,10 @@
-import time
 from abc import ABCMeta, abstractmethod
 from os import PathLike
 from typing import Iterable, Sequence, Union
 
 from nerpy.document import Document, Mention
 from nerpy.encoding import MentionEncoder
-from nerpy.features import ExtractedFeatures, SentenceFeatureExtractor
+from nerpy.features import SentenceFeatureExtractor
 
 
 class MentionAnnotator(metaclass=ABCMeta):

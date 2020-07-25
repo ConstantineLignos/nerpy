@@ -30,9 +30,9 @@ def test_word_vectors():
     token_features = {}
 
     extractor = WordEmbeddingFeatures("tests/test_data/word_vectors.sqlite")
-    extractor.extract(t0, -1, token_features)
-    extractor.extract(t1, 0, token_features)
-    extractor.extract(t2, 1, token_features)
+    extractor.extract(t0, t0.text, -1, token_features)
+    extractor.extract(t1, t1.text, 0, token_features)
+    extractor.extract(t2, t2.text, 1, token_features)
 
     # Vectors
     # the 0.0129 0.0026 0.0098
@@ -50,18 +50,18 @@ def test_word_vectors():
 
     # Punctuation should not have any feature added
     token_features = {}
-    extractor.extract(t3, 0, token_features)
+    extractor.extract(t3, t3.text, 0, token_features)
     assert len(token_features) == 0
 
     # Token not in word vectors file
     token_features = {}
-    extractor.extract(t4, 0, token_features)
+    extractor.extract(t4, t4.text, 0, token_features)
     assert token_features == {"v[0]=OOV": 1.0}
 
     # Check scaling
     extractor = WordEmbeddingFeatures("tests/test_data/word_vectors.sqlite", scale=2.0)
     token_features = {}
-    extractor.extract(t0, 0, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
     assert token_features["v[0]=0"] == pytest.approx(0.0129 * 2.0)
     assert token_features["v[0]=1"] == pytest.approx(0.0026 * 2.0)
     assert token_features["v[0]=2"] == pytest.approx(0.0098 * 2.0)
@@ -78,9 +78,9 @@ def test_brown_clusters():
     # 110110100110110100      article 2038
     token_features = {}
     extractor = BrownClusterFeatures(clusters_path, use_full_paths=True)
-    extractor.extract(t0, -1, token_features)
-    extractor.extract(t1, 0, token_features)
-    extractor.extract(t2, 1, token_features)
+    extractor.extract(t0, t0.text, -1, token_features)
+    extractor.extract(t1, t1.text, 0, token_features)
+    extractor.extract(t2, t2.text, 1, token_features)
     assert token_features == {
         "bc[-1]=10100": 1.0,
         "bc[0]=OOV": 1.0,
@@ -90,9 +90,9 @@ def test_brown_clusters():
     # Test specific prefixes
     token_features = {}
     extractor = BrownClusterFeatures(clusters_path, use_prefixes=True, prefixes=[1, 2])
-    extractor.extract(t0, -1, token_features)
-    extractor.extract(t1, 0, token_features)
-    extractor.extract(t2, 1, token_features)
+    extractor.extract(t0, t0.text, -1, token_features)
+    extractor.extract(t1, t1.text, 0, token_features)
+    extractor.extract(t2, t2.text, 1, token_features)
     assert token_features == {
         "bc[-1]=1": 1.0,
         "bc[-1]=10": 1.0,
@@ -104,9 +104,9 @@ def test_brown_clusters():
     # Test all prefixes
     token_features = {}
     extractor = BrownClusterFeatures(clusters_path, use_prefixes=True)
-    extractor.extract(t0, -1, token_features)
-    extractor.extract(t1, 0, token_features)
-    extractor.extract(t2, 1, token_features)
+    extractor.extract(t0, t0.text, -1, token_features)
+    extractor.extract(t1, t1.text, 0, token_features)
+    extractor.extract(t2, t2.text, 1, token_features)
     assert token_features == {
         "bc[-1]=1": 1.0,
         "bc[-1]=10": 1.0,
@@ -171,12 +171,12 @@ def test_token_identity():
 
     token_features = {}
     extractor = TokenIdentity()
-    extractor.extract(t0, 0, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
     assert token_features == {"t[0]=Foo": 1.0}
 
     token_features = {}
     extractor = TokenIdentity(lowercase=True)
-    extractor.extract(t0, 0, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
     assert token_features == {"t[0]=foo": 1.0}
 
 
@@ -188,9 +188,9 @@ def test_capitalized():
     token_features = {}
 
     extractor = IsCapitalized()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
-    extractor.extract(t2, 2, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
+    extractor.extract(t2, t2.text, 2, token_features)
 
     assert token_features == {"cap[0]=True": 1.0}
 
@@ -203,9 +203,9 @@ def test_is_punc():
     token_features = {}
 
     extractor = IsPunc()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
-    extractor.extract(t2, 2, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
+    extractor.extract(t2, t2.text, 2, token_features)
 
     assert token_features == {"pnc[0]=True": 1.0, "pnc[1]=True": 1.0}
 
@@ -218,9 +218,9 @@ def test_all_caps():
     token_features = {}
 
     extractor = AllCaps()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
-    extractor.extract(t2, 2, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
+    extractor.extract(t2, t2.text, 2, token_features)
 
     assert token_features == {"allcap[0]=True": 1.0}
 
@@ -236,12 +236,12 @@ def test_all_numeric():
     token_features = {}
 
     extractor = AllNumeric()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
-    extractor.extract(t2, 2, token_features)
-    extractor.extract(t3, 3, token_features)
-    extractor.extract(t4, 4, token_features)
-    extractor.extract(t5, 5, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
+    extractor.extract(t2, t2.text, 2, token_features)
+    extractor.extract(t3, t3.text, 3, token_features)
+    extractor.extract(t4, t4.text, 4, token_features)
+    extractor.extract(t5, t5.text, 5, token_features)
 
     assert token_features == {
         "allnum[0]=True": 1.0,
@@ -259,9 +259,9 @@ def test_contains_number():
     token_features = {}
 
     extractor = ContainsNumber()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
-    extractor.extract(t2, 2, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
+    extractor.extract(t2, t2.text, 2, token_features)
 
     assert token_features == {
         "contnum[0]=True": 1.0,
@@ -276,8 +276,8 @@ def test_length_value():
     token_features = {}
 
     extractor = LengthValue()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
 
     assert token_features == {"lenv[0]=3": 1.0, "lenv[1]=1": 1.0}
 
@@ -289,8 +289,8 @@ def test_length_weight():
     token_features = {}
 
     extractor = LengthWeight()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
 
     assert token_features == {"lenw[0]": 3, "lenw[1]": 1}
 
@@ -302,8 +302,8 @@ def test_pos():
     token_features = {}
 
     extractor = POS()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
 
     assert token_features == {"pos[0]=NNP": 1.0}
 
@@ -317,9 +317,9 @@ def test_sfx():
     feature_kwargs = {"min_length": 1, "max_length": 3}
 
     extractor = Suffix(**feature_kwargs)
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
-    extractor.extract(t2, 2, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
+    extractor.extract(t2, t2.text, 2, token_features)
 
     assert token_features == {
         "sfx[0]=d": 1.0,
@@ -341,9 +341,9 @@ def test_pfx():
     feature_kwargs = {"min_length": 1, "max_length": 3}
 
     extractor = Prefix(**feature_kwargs)
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
-    extractor.extract(t2, 2, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
+    extractor.extract(t2, t2.text, 2, token_features)
 
     assert token_features == {
         "pfx[0]=H": 1.0,
@@ -366,11 +366,11 @@ def test_shape():
     token_features = {}
 
     extractor = WordShape()
-    extractor.extract(t0, 0, token_features)
-    extractor.extract(t1, 1, token_features)
-    extractor.extract(t2, 2, token_features)
-    extractor.extract(t3, 3, token_features)
-    extractor.extract(t4, 4, token_features)
+    extractor.extract(t0, t0.text, 0, token_features)
+    extractor.extract(t1, t1.text, 1, token_features)
+    extractor.extract(t2, t2.text, 2, token_features)
+    extractor.extract(t3, t3.text, 3, token_features)
+    extractor.extract(t4, t4.text, 4, token_features)
 
     assert token_features == {
         "shp[0]=00-00-0000": 1.0,

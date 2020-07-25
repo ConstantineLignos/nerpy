@@ -14,7 +14,7 @@ from pycrfsuite import Tagger, Trainer  # pylint: disable=no-name-in-module
 from nerpy.annotator import SequenceMentionAnnotator, Trainable
 from nerpy.document import Document, Mention, MentionType
 from nerpy.encoding import MentionEncoder
-from nerpy.features import ExtractedFeatures, SentenceFeatureExtractor
+from nerpy.features import SentenceFeatureExtractor
 
 # TODO: Figure out how to deserialize with embeddings
 
@@ -52,7 +52,7 @@ class CRFSuiteAnnotator(SequenceMentionAnnotator, Trainable):
     def for_training(
         cls,
         mention_type: MentionType,
-        feature_extractor: Optional[SentenceFeatureExtractor],
+        feature_extractor: SentenceFeatureExtractor,
         mention_encoder: MentionEncoder,
     ) -> "CRFSuiteAnnotator":
         tagger = Tagger()

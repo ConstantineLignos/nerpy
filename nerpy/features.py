@@ -6,7 +6,6 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional,
 # For Unicode properties
 import numpy as np
 import regex
-from attr import attrs
 from quickvec import SqliteWordEmbedding
 
 from nerpy.document import Document, Sentence, Token
@@ -30,7 +29,7 @@ CorpusLabels = Sequence[SequenceLabels]
 
 class FeatureExtractor(metaclass=ABCMeta):
     @abstractmethod
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         raise NotImplementedError()
 
 
@@ -46,15 +45,15 @@ class WordEmbeddingFeatures(FeatureExtractor):
         # Store normalized form or None to indicate no match
         self._word_casing: Dict[str, Optional[str]] = {}
         # Cache vectors
-        # We look up directly from the vectors if there is no scaling, or add our own wrapper if there is scaling.
+        # We look up directly from the vectors if there is no scaling, or add our own
+        # wrapper if there is scaling.
         self._embedding_cache = lru_cache(cache_size)(
             self.word_vectors.__getitem__
             if self.scale == 1.0
             else self._scaled_word_vector
         )
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        text = token.text
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         # Do nothing for punc
         if _is_punc(text):
             return
@@ -145,9 +144,9 @@ class BrownClusterFeatures(FeatureExtractor):
                 path, token, _ = splits
                 self.paths[token] = path
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         try:
-            path = self.paths[token.text]
+            path = self.paths[text]
         except KeyError:
             _add_feature_with_value(self.FEATURE, index, self.OOV, output)
             return
@@ -173,12 +172,9 @@ class TokenIdentity(FeatureExtractor):
     def __init__(self, *, lowercase: bool = False):
         self.lowercase = lowercase
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         _add_feature_with_value(
-            self.FEATURE,
-            index,
-            token.text if not self.lowercase else token.text.lower(),
-            output,
+            self.FEATURE, index, text if not self.lowercase else text.lower(), output,
         )
 
 
@@ -186,8 +182,8 @@ class IsCapitalized(FeatureExtractor):
 
     FEATURE = "cap"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        value = token.text[0].isupper()
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
+        value = text[0].isupper()
         if value:
             _add_feature_with_value(self.FEATURE, index, value, output)
 
@@ -196,8 +192,8 @@ class IsPunc(FeatureExtractor):
 
     FEATURE = "pnc"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        value = _is_punc(token.text)
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
+        value = _is_punc(text)
         if value:
             _add_feature_with_value(self.FEATURE, index, value, output)
 
@@ -206,8 +202,8 @@ class AllCaps(FeatureExtractor):
 
     FEATURE = "allcap"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        value = token.text.isupper()
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
+        value = text.isupper()
         if value:
             _add_feature_with_value(self.FEATURE, index, value, output)
 
@@ -216,8 +212,8 @@ class AllNumeric(FeatureExtractor):
 
     FEATURE = "allnum"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        value = bool(_RE_DIGIT.search(token.text) and _RE_NUMERIC.match(token.text))
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
+        value = bool(_RE_DIGIT.search(text) and _RE_NUMERIC.match(text))
         if value:
             _add_feature_with_value(self.FEATURE, index, value, output)
 
@@ -226,8 +222,8 @@ class ContainsNumber(FeatureExtractor):
 
     FEATURE = "contnum"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        value = bool(_RE_DIGIT.search(token.text))
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
+        value = bool(_RE_DIGIT.search(text))
         if value:
             _add_feature_with_value(self.FEATURE, index, value, output)
 
@@ -236,23 +232,23 @@ class LengthValue(FeatureExtractor):
 
     FEATURE = "lenv"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        _add_feature_with_value(self.FEATURE, index, len(token.text), output)
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
+        _add_feature_with_value(self.FEATURE, index, len(text), output)
 
 
 class LengthWeight(FeatureExtractor):
 
     FEATURE = "lenw"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        _add_feature_without_value(self.FEATURE, index, output, len(token.text))
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
+        _add_feature_without_value(self.FEATURE, index, output, len(text))
 
 
 class POS(FeatureExtractor):
 
     FEATURE = "pos"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         if token.pos_tag:
             _add_feature_with_value(self.FEATURE, index, token.pos_tag, output)
 
@@ -265,12 +261,11 @@ class Prefix(FeatureExtractor):
         self.min_length = min_length
         self.max_length = max_length
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        token_text = token.text
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         for i in range(self.min_length, self.max_length + 1):
-            if i > len(token_text):
+            if i > len(text):
                 break
-            _add_feature_with_value(self.FEATURE, index, token_text[:i], output)
+            _add_feature_with_value(self.FEATURE, index, text[:i], output)
 
 
 class Suffix(FeatureExtractor):
@@ -281,23 +276,22 @@ class Suffix(FeatureExtractor):
         self.min_length = min_length
         self.max_length = max_length
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
-        token_text = token.text
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         for i in range(self.min_length, self.max_length + 1):
-            if i > len(token_text):
+            if i > len(text):
                 break
-            _add_feature_with_value(self.FEATURE, index, token_text[-i:], output)
+            _add_feature_with_value(self.FEATURE, index, text[-i:], output)
 
 
 class WordShape(FeatureExtractor):
 
     FEATURE = "shp"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         chars = []
         # Because Python doesn't support full unicode properties, we can't easily do a regex like
         # "match lowercase letters". Instead we just go character by character
-        for char in token.text:
+        for char in text:
             if char.isalpha():
                 if char.isupper():
                     chars.append("A")
@@ -314,7 +308,7 @@ class Bias(FeatureExtractor):
 
     FEATURE = "b"
 
-    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
+    def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         if index == 0:
             _add_feature_without_value(self.FEATURE, index, output)
 
@@ -374,19 +368,13 @@ class SentenceFeatureExtractor:
                 position_feature_extractors = self._window_features[position]
                 if 0 <= position_index <= max_i:
                     position_token = tokens[position_index]
+                    text = position_token.text
                     for extractor in position_feature_extractors:
-                        extractor.extract(position_token, position, token_features)
+                        extractor.extract(position_token, text, position, token_features)
 
             sentence_features.append(token_features)
 
         return sentence_features
-
-
-@attrs(auto_attribs=True, frozen=True)
-class ExtractedFeatures:
-    extractor: SentenceFeatureExtractor
-    features: CorpusFeatures
-    labels: Optional[CorpusLabels]
 
 
 def _add_feature_with_value(
