@@ -310,10 +310,19 @@ class WordShape(FeatureExtractor):
         _add_feature_with_value(self.FEATURE, index, "".join(chars), output)
 
 
+class Bias(FeatureExtractor):
+
+    FEATURE = "b"
+
+    def extract(self, token: Token, index: int, output: FeatureSink) -> None:
+        if index == 0:
+            _add_feature_without_value(self.FEATURE, index, output)
+
+
 class SentenceFeatureExtractor:
 
-    BIAS = "b"
     FEATURE_CLASSES = {
+        "bias": Bias,
         "token_identity": TokenIdentity,
         "is_capitalized": IsCapitalized,
         "is_punc": IsPunc,
@@ -331,8 +340,7 @@ class SentenceFeatureExtractor:
     }
 
     def __init__(self, feature_params: Mapping):
-
-        self.window_features: dict = {}
+        self._window_features: Dict[int, List[FeatureExtractor]] = {}
 
         for feature_set in feature_params:
             window = feature_params[feature_set]["window"]
@@ -349,9 +357,9 @@ class SentenceFeatureExtractor:
 
             for position in window:
                 if position in window:
-                    if position not in self.window_features:
-                        self.window_features[position] = []
-                    self.window_features[position].extend(window_features)
+                    if position not in self._window_features:
+                        self._window_features[position] = []
+                    self._window_features[position].extend(window_features)
 
     def extract(self, sentence: Sentence, _doc: Document) -> SequenceFeatures:
         sentence_features: List[Mapping[str, float]] = []
@@ -359,11 +367,11 @@ class SentenceFeatureExtractor:
         max_i = len(tokens) - 1
 
         for idx, _ in enumerate(tokens):
-            token_features = {self.BIAS: 1.0}
+            token_features: Dict[str, float] = {}
 
-            for position in self.window_features:
+            for position in self._window_features:
                 position_index = idx + position
-                position_feature_extractors = self.window_features[position]
+                position_feature_extractors = self._window_features[position]
                 if 0 <= position_index <= max_i:
                     position_token = tokens[position_index]
                     for extractor in position_feature_extractors:

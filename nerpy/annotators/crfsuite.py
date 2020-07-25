@@ -16,8 +16,7 @@ from nerpy.document import Document, Mention, MentionType
 from nerpy.encoding import MentionEncoder
 from nerpy.features import ExtractedFeatures, SentenceFeatureExtractor
 
-# TODO: Figure out how to serialize models with their strategies and feature extractors
-# TODO: Refactor to reduce redundancy around feature extraction and multiple training methods
+# TODO: Figure out how to deserialize with embeddings
 
 
 # Due to the Tagger object, cannot be frozen
@@ -98,11 +97,11 @@ class CRFSuiteAnnotator(SequenceMentionAnnotator, Trainable):
         self,
         docs: Iterable[Document],
         *,
-        tmp_model_path: Optional[Union[str, Path]] = None,
         algorithm: str,
         train_params: Optional[Mapping] = None,
-        verbose: bool = False,
+        tmp_model_path: Optional[Union[str, Path]] = None,
         log_file: Optional[IO[str]] = None,
+        verbose: bool = False,
     ) -> None:
         if train_params is None:
             train_params = {}
@@ -164,36 +163,6 @@ class CRFSuiteAnnotator(SequenceMentionAnnotator, Trainable):
 
         if tmpdir:
             tmpdir.cleanup()
-
-    def train_featurized(
-        self,
-        training_data: ExtractedFeatures,
-        model_path: Union[str, Path],
-        *,
-        algorithm: str,
-        train_params: Optional[Mapping] = None,
-        verbose: bool = False,
-        log_file: Optional[IO[str]] = None,
-    ) -> None:
-        assert (
-            training_data.extractor == self._feature_extractor
-        ), "Training data feature extractor differs from instance feature extractor"
-
-        if train_params is None:
-            train_params = {}
-        trainer = Trainer(algorithm=algorithm, params=train_params, verbose=verbose)
-        Path(model_path).parent.mkdir(parents=True, exist_ok=True)
-
-        for sent_x, sent_y in zip(training_data.features, training_data.labels):
-            trainer.append(sent_x, sent_y)
-
-        start_time = time.perf_counter()
-        trainer.train(model_path)
-        print(
-            "Training took {} seconds".format(time.perf_counter() - start_time),
-            file=log_file,
-        )
-        self._tagger.open(model_path)
 
 
 def train_crfsuite(

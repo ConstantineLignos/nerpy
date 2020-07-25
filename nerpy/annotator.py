@@ -51,37 +51,3 @@ class SequenceMentionAnnotator(MentionAnnotator, metaclass=ABCMeta):
     @abstractmethod
     def to_bytes(self) -> bytes:
         raise NotImplementedError
-
-    def extract_features(self, docs: Iterable[Document]) -> ExtractedFeatures:
-        # Avoid repeated lookups of these properties
-        feature_extractor = self.feature_extractor
-        mention_encoder = self.mention_encoder
-
-        mention_count = 0
-        token_count = 0
-        document_count = 0
-        sentence_count = 0
-        start_time = time.perf_counter()
-        features = []
-        labels = []
-        for doc in docs:
-            for sentence, mentions in doc.sentences_with_mentions():
-                sent_x = feature_extractor.extract(sentence, doc)
-                sent_y = mention_encoder.encode_mentions(sentence, mentions)
-                assert len(sent_x) == len(sent_y)
-                features.append(sent_x)
-                labels.append(sent_y)
-
-                mention_count += len(mentions)
-                token_count += len(sent_x)
-                sentence_count += 1
-
-            document_count += 1
-
-        print(
-            f"Extracted features for {document_count} documents, {sentence_count} sentences, "
-            f"{token_count} tokens, {mention_count} mentions in {time.perf_counter() - start_time} "
-            "seconds"
-        )
-
-        return ExtractedFeatures(feature_extractor, features, labels)

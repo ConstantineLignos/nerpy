@@ -382,7 +382,9 @@ def test_shape():
 
 
 def test_feature_extraction():
-    feature_params = {"baseline": {"window": [-1, 0, 1], "token_identity": {}}}
+    feature_params = {
+        "baseline": {"window": [-1, 0, 1], "bias": {}, "token_identity": {}}
+    }
     feature_extractor = SentenceFeatureExtractor(feature_params)
     builder = DocumentBuilder("test")
     t0 = Token("foo", 0)
@@ -395,11 +397,11 @@ def test_feature_extraction():
 
     features = feature_extractor.extract(s1, d)
     assert features == [
-        {"b": 1.0, "tkn[0]=foo": 1.0, "tkn[1]=bar": 1.0},
-        {"b": 1.0, "tkn[-1]=foo": 1.0, "tkn[0]=bar": 1.0, "tkn[1]=foobar": 1.0},
-        {"b": 1.0, "tkn[-1]=bar": 1.0, "tkn[0]=foobar": 1.0, "tkn[1]=foobaz": 1.0},
-        {"b": 1.0, "tkn[-1]=foobar": 1.0, "tkn[0]=foobaz": 1.0, "tkn[1]=barbaz": 1.0},
-        {"b": 1.0, "tkn[-1]=foobaz": 1.0, "tkn[0]=barbaz": 1.0},
+        {"b[0]": 1.0, "tkn[0]=foo": 1.0, "tkn[1]=bar": 1.0},
+        {"b[0]": 1.0, "tkn[-1]=foo": 1.0, "tkn[0]=bar": 1.0, "tkn[1]=foobar": 1.0},
+        {"b[0]": 1.0, "tkn[-1]=bar": 1.0, "tkn[0]=foobar": 1.0, "tkn[1]=foobaz": 1.0},
+        {"b[0]": 1.0, "tkn[-1]=foobar": 1.0, "tkn[0]=foobaz": 1.0, "tkn[1]=barbaz": 1.0},
+        {"b[0]": 1.0, "tkn[-1]=foobaz": 1.0, "tkn[0]=barbaz": 1.0},
     ]
 
 

@@ -1,6 +1,7 @@
 {
   "word": {
     "window": [-2, -1, 0, 1, 2],
+    "bias": {},
     "token_identity": {},
     "word_shape": {},
     "is_capitalized": {},

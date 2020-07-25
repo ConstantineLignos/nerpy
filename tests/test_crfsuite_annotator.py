@@ -79,22 +79,6 @@ def test_annotator():
         pred_doc = saved_annotator.add_mentions(doc.copy_without_mentions())
         assert pred_doc.mentions == (m0, m1, m2)
 
-    # Test separate feature extraction
-    annotator3 = _create_annotator(feature_params)
-    features = annotator3.extract_features([doc])
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        model_path = tmpdirname + "/model"
-        annotator3.train_featurized(
-            features,
-            model_path=model_path,
-            algorithm="ap",
-            train_params=None,
-            verbose=False,
-            log_file=None,
-        )
-    pred_doc = annotator3.add_mentions(doc.copy_without_mentions())
-    assert pred_doc.mentions == (m0, m1, m2)
-
     # Test training wrapper
     train_params_with_alg = dict(train_params)
     train_params_with_alg["algorithm"] = "ap"
