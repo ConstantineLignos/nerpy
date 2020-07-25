@@ -172,12 +172,12 @@ def test_token_identity():
     token_features = {}
     extractor = TokenIdentity()
     extractor.extract(t0, 0, token_features)
-    assert token_features == {"tkn[0]=Foo": 1.0}
+    assert token_features == {"t[0]=Foo": 1.0}
 
     token_features = {}
     extractor = TokenIdentity(lowercase=True)
     extractor.extract(t0, 0, token_features)
-    assert token_features == {"tkn[0]=foo": 1.0}
+    assert token_features == {"t[0]=foo": 1.0}
 
 
 def test_capitalized():
@@ -207,7 +207,7 @@ def test_is_punc():
     extractor.extract(t1, 1, token_features)
     extractor.extract(t2, 2, token_features)
 
-    assert token_features == {"punc[0]=True": 1.0, "punc[1]=True": 1.0}
+    assert token_features == {"pnc[0]=True": 1.0, "pnc[1]=True": 1.0}
 
 
 def test_all_caps():
@@ -222,7 +222,7 @@ def test_all_caps():
     extractor.extract(t1, 1, token_features)
     extractor.extract(t2, 2, token_features)
 
-    assert token_features == {"all_caps[0]=True": 1.0}
+    assert token_features == {"allcap[0]=True": 1.0}
 
 
 def test_all_numeric():
@@ -244,10 +244,10 @@ def test_all_numeric():
     extractor.extract(t5, 5, token_features)
 
     assert token_features == {
-        "all_num[0]=True": 1.0,
-        "all_num[1]=True": 1.0,
-        "all_num[2]=True": 1.0,
-        "all_num[3]=True": 1.0,
+        "allnum[0]=True": 1.0,
+        "allnum[1]=True": 1.0,
+        "allnum[2]=True": 1.0,
+        "allnum[3]=True": 1.0,
     }
 
 
@@ -264,8 +264,8 @@ def test_contains_number():
     extractor.extract(t2, 2, token_features)
 
     assert token_features == {
-        "cntns_num[0]=True": 1.0,
-        "cntns_num[1]=True": 1.0,
+        "contnum[0]=True": 1.0,
+        "contnum[1]=True": 1.0,
     }
 
 
@@ -279,7 +279,7 @@ def test_length_value():
     extractor.extract(t0, 0, token_features)
     extractor.extract(t1, 1, token_features)
 
-    assert token_features == {"len_val[0]=3": 1.0, "len_val[1]=1": 1.0}
+    assert token_features == {"lenv[0]=3": 1.0, "lenv[1]=1": 1.0}
 
 
 def test_length_weight():
@@ -292,7 +292,7 @@ def test_length_weight():
     extractor.extract(t0, 0, token_features)
     extractor.extract(t1, 1, token_features)
 
-    assert token_features == {"len_weight[0]": 3, "len_weight[1]": 1}
+    assert token_features == {"lenw[0]": 3, "lenw[1]": 1}
 
 
 def test_pos():
@@ -373,11 +373,11 @@ def test_shape():
     extractor.extract(t4, 4, token_features)
 
     assert token_features == {
-        "shape[0]=00-00-0000": 1.0,
-        "shape[1]=000-000-0000": 1.0,
-        "shape[2]=A.A.A": 1.0,
-        "shape[3]=AA00-00": 1.0,
-        "shape[4]=Aaa": 1.0,
+        "shp[0]=00-00-0000": 1.0,
+        "shp[1]=000-000-0000": 1.0,
+        "shp[2]=A.A.A": 1.0,
+        "shp[3]=AA00-00": 1.0,
+        "shp[4]=Aaa": 1.0,
     }
 
 
@@ -397,11 +397,11 @@ def test_feature_extraction():
 
     features = feature_extractor.extract(s1, d)
     assert features == [
-        {"b[0]": 1.0, "tkn[0]=foo": 1.0, "tkn[1]=bar": 1.0},
-        {"b[0]": 1.0, "tkn[-1]=foo": 1.0, "tkn[0]=bar": 1.0, "tkn[1]=foobar": 1.0},
-        {"b[0]": 1.0, "tkn[-1]=bar": 1.0, "tkn[0]=foobar": 1.0, "tkn[1]=foobaz": 1.0},
-        {"b[0]": 1.0, "tkn[-1]=foobar": 1.0, "tkn[0]=foobaz": 1.0, "tkn[1]=barbaz": 1.0},
-        {"b[0]": 1.0, "tkn[-1]=foobaz": 1.0, "tkn[0]=barbaz": 1.0},
+        {"b[0]": 1.0, "t[0]=foo": 1.0, "t[1]=bar": 1.0},
+        {"b[0]": 1.0, "t[-1]=foo": 1.0, "t[0]=bar": 1.0, "t[1]=foobar": 1.0},
+        {"b[0]": 1.0, "t[-1]=bar": 1.0, "t[0]=foobar": 1.0, "t[1]=foobaz": 1.0},
+        {"b[0]": 1.0, "t[-1]=foobar": 1.0, "t[0]=foobaz": 1.0, "t[1]=barbaz": 1.0},
+        {"b[0]": 1.0, "t[-1]=foobaz": 1.0, "t[0]=barbaz": 1.0},
     ]
 
 

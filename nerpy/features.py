@@ -168,7 +168,7 @@ class BrownClusterFeatures(FeatureExtractor):
 
 class TokenIdentity(FeatureExtractor):
 
-    FEATURE = "tkn"
+    FEATURE = "t"
 
     def __init__(self, *, lowercase: bool = False):
         self.lowercase = lowercase
@@ -194,7 +194,7 @@ class IsCapitalized(FeatureExtractor):
 
 class IsPunc(FeatureExtractor):
 
-    FEATURE = "punc"
+    FEATURE = "pnc"
 
     def extract(self, token: Token, index: int, output: FeatureSink) -> None:
         value = _is_punc(token.text)
@@ -204,7 +204,7 @@ class IsPunc(FeatureExtractor):
 
 class AllCaps(FeatureExtractor):
 
-    FEATURE = "all_caps"
+    FEATURE = "allcap"
 
     def extract(self, token: Token, index: int, output: FeatureSink) -> None:
         value = token.text.isupper()
@@ -214,7 +214,7 @@ class AllCaps(FeatureExtractor):
 
 class AllNumeric(FeatureExtractor):
 
-    FEATURE = "all_num"
+    FEATURE = "allnum"
 
     def extract(self, token: Token, index: int, output: FeatureSink) -> None:
         value = bool(_RE_DIGIT.search(token.text) and _RE_NUMERIC.match(token.text))
@@ -224,7 +224,7 @@ class AllNumeric(FeatureExtractor):
 
 class ContainsNumber(FeatureExtractor):
 
-    FEATURE = "cntns_num"
+    FEATURE = "contnum"
 
     def extract(self, token: Token, index: int, output: FeatureSink) -> None:
         value = bool(_RE_DIGIT.search(token.text))
@@ -234,7 +234,7 @@ class ContainsNumber(FeatureExtractor):
 
 class LengthValue(FeatureExtractor):
 
-    FEATURE = "len_val"
+    FEATURE = "lenv"
 
     def extract(self, token: Token, index: int, output: FeatureSink) -> None:
         _add_feature_with_value(self.FEATURE, index, len(token.text), output)
@@ -242,7 +242,7 @@ class LengthValue(FeatureExtractor):
 
 class LengthWeight(FeatureExtractor):
 
-    FEATURE = "len_weight"
+    FEATURE = "lenw"
 
     def extract(self, token: Token, index: int, output: FeatureSink) -> None:
         _add_feature_without_value(self.FEATURE, index, output, len(token.text))
@@ -291,7 +291,7 @@ class Suffix(FeatureExtractor):
 
 class WordShape(FeatureExtractor):
 
-    FEATURE = "shape"
+    FEATURE = "shp"
 
     def extract(self, token: Token, index: int, output: FeatureSink) -> None:
         chars = []
