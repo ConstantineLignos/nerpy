@@ -383,7 +383,8 @@ def test_shape():
 
 def test_feature_extraction():
     feature_params = {
-        "baseline": {"window": [-1, 0, 1], "bias": {}, "token_identity": {}}
+        "baseline": {"window": [-1, 0, 1], "bias": {}, "token_identity": {}},
+        "subword": {"window": [0], "suffix": {"min_length": 1, "max_length": 1}},
     }
     feature_extractor = SentenceFeatureExtractor(feature_params)
     builder = DocumentBuilder("test")
@@ -397,11 +398,29 @@ def test_feature_extraction():
 
     features = feature_extractor.extract(s1, d)
     assert features == [
-        {"b[0]": 1.0, "t[0]=foo": 1.0, "t[1]=bar": 1.0},
-        {"b[0]": 1.0, "t[-1]=foo": 1.0, "t[0]=bar": 1.0, "t[1]=foobar": 1.0},
-        {"b[0]": 1.0, "t[-1]=bar": 1.0, "t[0]=foobar": 1.0, "t[1]=foobaz": 1.0},
-        {"b[0]": 1.0, "t[-1]=foobar": 1.0, "t[0]=foobaz": 1.0, "t[1]=barbaz": 1.0},
-        {"b[0]": 1.0, "t[-1]=foobaz": 1.0, "t[0]=barbaz": 1.0},
+        {"b[0]": 1.0, "t[0]=foo": 1.0, "t[1]=bar": 1.0, "sfx[0]=o": 1.0},
+        {
+            "b[0]": 1.0,
+            "t[-1]=foo": 1.0,
+            "t[0]=bar": 1.0,
+            "t[1]=foobar": 1.0,
+            "sfx[0]=r": 1.0,
+        },
+        {
+            "b[0]": 1.0,
+            "t[-1]=bar": 1.0,
+            "t[0]=foobar": 1.0,
+            "t[1]=foobaz": 1.0,
+            "sfx[0]=r": 1.0,
+        },
+        {
+            "b[0]": 1.0,
+            "t[-1]=foobar": 1.0,
+            "t[0]=foobaz": 1.0,
+            "t[1]=barbaz": 1.0,
+            "sfx[0]=z": 1.0,
+        },
+        {"b[0]": 1.0, "t[-1]=foobaz": 1.0, "t[0]=barbaz": 1.0, "sfx[0]=z": 1.0},
     ]
 
 

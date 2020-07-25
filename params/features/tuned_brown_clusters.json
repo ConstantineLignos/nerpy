@@ -1,0 +1,28 @@
+{
+  "baseline": {
+    "window": [
+      -2,
+      -1,
+      0,
+      1,
+      2
+    ],
+    "bias": {},
+    "token_identity": {},
+    "word_shape": {},
+    "is_capitalized": {},
+    "all_caps": {},
+    "all_numeric": {},
+    "contains_number": {},
+    "is_punc": {},
+    "pos": {},
+    "suffix": {
+      "min_length": 1,
+      "max_length": 4
+    },
+    "brown_clusters": {
+      "path": "data/rcv1.64M-c10240-p1.paths",
+      "use_prefixes": true
+    }
+  }
+}

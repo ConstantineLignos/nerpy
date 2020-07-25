@@ -1,7 +1,18 @@
 import re
 from abc import ABCMeta, abstractmethod
 from functools import lru_cache
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
+from os import PathLike
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Union,
+)
 
 # For Unicode properties
 import numpy as np
@@ -38,7 +49,9 @@ class WordEmbeddingFeatures(FeatureExtractor):
     FEATURE = "v"
     OOV = "OOV"
 
-    def __init__(self, path: str, *, scale: float = 1.0, cache_size: int = 10000):
+    def __init__(
+        self, path: Union[str, PathLike], *, scale: float = 1.0, cache_size: int = 10000
+    ):
         self.scale = scale
         self.word_vectors = SqliteWordEmbedding.open(path)
         self._feature_keys_cache: Dict[int, List[str]] = {}
@@ -105,7 +118,7 @@ class BrownClusterFeatures(FeatureExtractor):
 
     def __init__(
         self,
-        clusters_path: str,
+        path: Union[str, PathLike],
         *,
         use_full_paths: bool = False,
         use_prefixes: bool = False,
@@ -134,15 +147,15 @@ class BrownClusterFeatures(FeatureExtractor):
         self.prefixes = prefixes
 
         self.paths: Dict[str, str] = {}
-        with open(clusters_path, encoding="utf8") as cluster_file:
+        with open(path, encoding="utf8") as cluster_file:
             for idx, line in enumerate(cluster_file):
                 splits = line.split()
                 if len(splits) != 3:
                     raise ValueError(
-                        f"Invalid format on line {idx + 1} of file {clusters_path}: {repr(line)}"
+                        f"Invalid format on line {idx + 1} of file {path}: {repr(line)}"
                     )
-                path, token, _ = splits
-                self.paths[token] = path
+                cluster_path, token, _ = splits
+                self.paths[token] = cluster_path
 
     def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         try:
@@ -350,26 +363,25 @@ class SentenceFeatureExtractor:
                 window_features.append(feature_class(**feature_kwargs))
 
             for position in window:
-                if position in window:
-                    if position not in self._window_features:
-                        self._window_features[position] = []
-                    self._window_features[position].extend(window_features)
+                if position not in self._window_features:
+                    self._window_features[position] = []
+                self._window_features[position].extend(window_features)
 
     def extract(self, sentence: Sentence, _doc: Document) -> SequenceFeatures:
         sentence_features: List[Mapping[str, float]] = []
         tokens = sentence.tokens
-        max_i = len(tokens) - 1
+        len_tokens = len(tokens)
 
+        # Optimization: enumerate is faster than range
         for idx, _ in enumerate(tokens):
             token_features: Dict[str, float] = {}
 
             for position in self._window_features:
                 position_index = idx + position
-                position_feature_extractors = self._window_features[position]
-                if 0 <= position_index <= max_i:
+                if 0 <= position_index < len_tokens:
                     position_token = tokens[position_index]
                     text = position_token.text
-                    for extractor in position_feature_extractors:
+                    for extractor in self._window_features[position]:
                         extractor.extract(position_token, text, position, token_features)
 
             sentence_features.append(token_features)
