@@ -98,6 +98,7 @@ class MentionType(EntityType):
     pass
 
 
+# TODO: Add raw_text attribute. None if same as text.
 @attrs(frozen=True, slots=True)
 class Token(Sequence[str]):
     _POS_TAG = "pos"

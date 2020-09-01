@@ -23,6 +23,7 @@ def ingest_conll(
         input_docs = CoNLLIngester(encoder(), ignore_comments=ignore_comments).ingest(
             train_file, os.path.basename(input_path)
         )
+    # TODO: Give number of mentions
     print(
         f"Loaded {len(input_docs)} documents in {time.perf_counter() - start_time} seconds"
     )

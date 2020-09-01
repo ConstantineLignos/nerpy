@@ -53,18 +53,62 @@ class WordEmbeddingFeatures(FeatureExtractor):
         self, path: Union[str, PathLike], *, scale: float = 1.0, cache_size: int = 10000
     ):
         self.scale = scale
-        self.word_vectors = SqliteWordEmbedding.open(path)
+        self._cache_size = cache_size
+        self.embedding = SqliteWordEmbedding.open(path)
         self._feature_keys_cache: Dict[int, List[str]] = {}
         # Store normalized form or None to indicate no match
         self._word_casing: Dict[str, Optional[str]] = {}
         # Cache vectors
         # We look up directly from the vectors if there is no scaling, or add our own
         # wrapper if there is scaling.
-        self._embedding_cache = lru_cache(cache_size)(
-            self.word_vectors.__getitem__
-            if self.scale == 1.0
-            else self._scaled_word_vector
+        self._embedding_cache = self._init_cache()
+        # Store some metadata to be used for checking after deserialization
+        self._emb_path = path
+        self._emb_dim = self.embedding.dim
+        self._emb_len = len(self.embedding)
+        self._emb_first_word = next(self.embedding.keys())
+        self._emb_first_word_vec = self.embedding[self._emb_first_word]
+
+    def _init_cache(self):
+        # Note that this must be called after the cache size and embedding have been
+        # initialized
+        return lru_cache(self._cache_size)(
+            self.embedding.__getitem__ if self.scale == 1.0 else self._scaled_word_vector
         )
+
+    def __getstate__(self) -> dict:
+        state = dict(self.__dict__)
+        state["embedding"] = None
+        state["_feature_keys_cache"] = None
+        state["_word_casing"] = None
+        state["_embedding_cache"] = None
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        self.__dict__.update(state)
+        # TODO: Find embedding by original path, then just basename
+        path = self._emb_path
+        self.embedding = SqliteWordEmbedding.open(path)
+        # TODO: Check for consistency
+        if (
+            self._emb_dim != self.embedding.dim  # Dimensionality
+            or self._emb_len != len(self.embedding)  # Vocab size
+            or (
+                self._emb_first_word not in self.embedding
+                or not np.array_equal(
+                    self.embedding[self._emb_first_word], self._emb_first_word_vec
+                )  # Embedding of first word
+            )
+        ):
+            raise ValueError(
+                f"Embeddings loaded from {path} do not appear to differ from the "
+                "embeddings used when the feature extractor was serialized."
+                "To correct this, load the same embeddings used in model training."
+            )
+
+        self._feature_keys_cache = {}
+        self._word_casing = {}
+        self._embedding_cache = self._init_cache()
 
     def extract(self, token: Token, text: str, index: int, output: FeatureSink) -> None:
         # Do nothing for punc
@@ -72,7 +116,7 @@ class WordEmbeddingFeatures(FeatureExtractor):
             return
 
         # Optimization: avoid repeated lookups
-        word_vectors = self.word_vectors
+        word_vectors = self.embedding
 
         # Optimization: Using get and try/except result in indistinguishable performance
         norm_text = self._word_casing.get(text, _NOTHING)
@@ -106,7 +150,7 @@ class WordEmbeddingFeatures(FeatureExtractor):
         output.update(zip(feature_keys, self._embedding_cache(norm_text)))  # type: ignore
 
     def _scaled_word_vector(self, word: str) -> np.ndarray:
-        vec = self.word_vectors[word]
+        vec = self.embedding[word]
         # We cannot use in-place multiply because vec is read-only
         return vec * self.scale
 
